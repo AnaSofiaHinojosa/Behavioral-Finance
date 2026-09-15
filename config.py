@@ -1,0 +1,14 @@
+# Configuración global de la simulación
+N_ASSETS = 50
+N_DAYS = 500
+S0 = 100.0
+MU = 0.08
+SIGMA = 0.20
+DT = 1 / 252
+
+N_TRADERS = 200
+SPREAD_BPS = 10.0
+COMMISSION_USD = 1.0
+
+N_BOOTSTRAP = 30
+RANDOM_SEED = 42
