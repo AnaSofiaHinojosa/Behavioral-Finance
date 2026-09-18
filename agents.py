@@ -38,7 +38,7 @@ class Agent:
         
         # --- 1. DECISIONES DE VENTA (DISPOSICIÓN Y CONFUSORES) ---
         for asset, pos_data in list(self.portfolio.items()):
-            cur_price = current_prices[asset]
+            cur_price = current_prices.iloc[asset] if isinstance(asset, (int, np.integer)) else current_prices.loc[asset]
             buy_price = pos_data['buy_price']
             qty = pos_data['quantity']
             
@@ -90,7 +90,7 @@ class Agent:
             available_assets = [a for a in range(len(current_prices)) if a not in self.portfolio]
             if available_assets and self.cash_net > 1000:
                 asset_to_buy = np.random.choice(available_assets)
-                cur_price = current_prices[asset_to_buy]
+                cur_price = current_prices.iloc[asset_to_buy] if isinstance(asset_to_buy, (int, np.integer)) else current_prices.loc[asset_to_buy]
                 
                 buy_amount = min(self.cash_net * 0.2, 10000)
                 half_spread = (spread_bps / 10000.0) / 2.0

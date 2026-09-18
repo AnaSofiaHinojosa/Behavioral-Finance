@@ -28,7 +28,7 @@ def estimate_disposition_effect(trades_df, daily_portfolios, market_prices):
         # 2. Paper Gains & Losses
         trader_holdings = daily_portfolios[day][agent_id]['holdings']
         for asset, data in trader_holdings.items():
-            cur_p = price_today[asset]
+            cur_p = price_today.iloc[asset] if isinstance(asset, (int, np.integer)) else price_today.loc[asset]
             buy_p = data['buy_price']
             if cur_p > buy_p:
                 PG += 1

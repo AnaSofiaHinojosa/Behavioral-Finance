@@ -63,7 +63,7 @@ def main():
     corr_behavior = np.corrcoef(alphas_disp, turnovers)[0, 1]
 
     summary_df = pd.DataFrame(results)
-    print("\n=================================== TABLA DE RESULTADOS OFICIAL ===================================")
+    print("\n=================================== TABLA DE RESULTADOS ===================================")
     print(summary_df.to_string(index=False))
     
     print("\n================ MATRICES DE CORRELACIÓN (TEST DE INDEPENDENCIA) ================")

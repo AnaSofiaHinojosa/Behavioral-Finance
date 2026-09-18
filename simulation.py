@@ -41,12 +41,18 @@ def run_scenario(scenario_cfg, market_prices, n_traders=N_TRADERS):
             }
             
             # Valor Bruto: Caja bruta pura + Posiciones valuadas al precio medio de mercado
-            pos_gross = sum(data['quantity'] * current_prices[asset] for asset, data in trader.portfolio.items())
+            pos_gross = sum(
+                data['quantity'] * (current_prices.iloc[asset] if isinstance(asset, (int, np.integer)) else current_prices.loc[asset]) 
+                for asset, data in trader.portfolio.items()
+            )
             daily_values_gross[t, idx] = trader.cash_gross + pos_gross
             
             # Valor Neto: Caja neta + Posiciones valuadas a precio Bid (menos spread)
             half_spread = (SPREAD_BPS / 10000.0) / 2.0
-            pos_net = sum(data['quantity'] * (current_prices[asset] * (1.0 - half_spread)) for asset, data in trader.portfolio.items())
+            pos_net = sum(
+                data['quantity'] * ((current_prices.iloc[asset] if isinstance(asset, (int, np.integer)) else current_prices.loc[asset]) * (1.0 - half_spread)) 
+                for asset, data in trader.portfolio.items()
+            )
             daily_values_net[t, idx] = trader.cash_net + pos_net
             
     trades_df = pd.DataFrame(all_trades)
