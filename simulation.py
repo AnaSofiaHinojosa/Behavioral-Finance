@@ -12,18 +12,17 @@ def run_scenario(scenario_cfg, market_prices, n_traders=N_TRADERS):
     traders = []
     
     for i in range(n_traders):
-        a_disp = np.random.uniform(0, 1) if alpha_disp_val == "rand" else alpha_disp_val
-        a_over = np.random.uniform(0, 1) if alpha_over_val == "rand" else alpha_over_val
+        a_disp = np.random.uniform(0, 1) if alpha_disp_val == "rand" else float(alpha_disp_val)
+        a_over = np.random.uniform(0, 1) if alpha_over_val == "rand" else float(alpha_over_val)
         initial_cash = np.random.uniform(10000, 500000)
-        traders.append(Agent(i, a_disp, a_over, initial_cash, n_assets))
+        
+        # Muestreo explícito de n_initial_positions ~ Uniform(5, 30) por trader
+        n_pos = int(np.random.uniform(5, 31))
+        traders.append(Agent(i, a_disp, a_over, initial_cash, n_assets, n_initial_positions=n_pos))
         
     all_trades = []
-    
-    # Tracking diario de valores brutos y netos
     daily_values_gross = np.zeros((n_days, n_traders))
     daily_values_net = np.zeros((n_days, n_traders))
-    
-    # Registro del estado del portafolio por trader y por día
     daily_portfolios = {} 
 
     for t in range(n_days):
@@ -34,19 +33,21 @@ def run_scenario(scenario_cfg, market_prices, n_traders=N_TRADERS):
             trades = trader.decide_trades(t, current_prices, spread_bps=SPREAD_BPS, commission_usd=COMMISSION_USD, confound=confound)
             all_trades.extend(trades)
             
-            # Guardar foto exacta del portafolio del trader al final del día
+            # Copia exacta del estado del portafolio
             daily_portfolios[t][trader.id] = {
-                'cash': trader.cash,
+                'cash_net': trader.cash_net,
+                'cash_gross': trader.cash_gross,
                 'holdings': {k: v.copy() for k, v in trader.portfolio.items()}
             }
             
-            # Valor Bruto (al precio puro de mercado sin fricciones)
+            # Valor Bruto: Caja bruta pura + Posiciones valuadas al precio medio de mercado
             pos_gross = sum(data['quantity'] * current_prices[asset] for asset, data in trader.portfolio.items())
-            daily_values_gross[t, idx] = trader.cash + pos_gross
+            daily_values_gross[t, idx] = trader.cash_gross + pos_gross
             
-            # Valor Neto (valuado a precio Bid por si tuviera que liquidar hoy)
-            pos_net = sum(data['quantity'] * (current_prices[asset] * (1.0 - (SPREAD_BPS/10000.0)/2)) for asset, data in trader.portfolio.items())
-            daily_values_net[t, idx] = trader.cash + pos_net
+            # Valor Neto: Caja neta + Posiciones valuadas a precio Bid (menos spread)
+            half_spread = (SPREAD_BPS / 10000.0) / 2.0
+            pos_net = sum(data['quantity'] * (current_prices[asset] * (1.0 - half_spread)) for asset, data in trader.portfolio.items())
+            daily_values_net[t, idx] = trader.cash_net + pos_net
             
     trades_df = pd.DataFrame(all_trades)
     
