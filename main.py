@@ -5,6 +5,8 @@ from simulation import run_scenario
 from estimators import estimate_disposition_effect, estimate_overconfidence
 from bootstrap import run_cluster_bootstrap
 from config import RANDOM_SEED, N_TRADERS, N_BOOTSTRAP
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def main():
     np.random.seed(RANDOM_SEED)
