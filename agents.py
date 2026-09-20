@@ -1,30 +1,42 @@
 import numpy as np
 
 class Agent:
+    """Representa a un inversionista individual con sesgos comportamentales inyectados."""
+
     def __init__(self, agent_id, alpha_disp, alpha_over, initial_cash, n_assets, n_initial_positions=None):
+        """Inicializa un agente trader y construye su portafolio inicial.
+
+        Args:
+            agent_id (int): Identificador único del agente.
+            alpha_disp (float): Magnitud inyectada del sesgo Disposition Effect [0, 1].
+            alpha_over (float): Magnitud inyectada del sesgo Overconfidence [0, 1].
+            initial_cash (float): Capital inicial en USD otorgado al agente.
+            n_assets (int): Universo total de activos disponibles en el mercado.
+            n_initial_positions (int, optional): Cantidad de posiciones iniciales a abrir.
+                Si es None, se muestrea uniformemente entre 5 y 30.
+        """
         self.id = agent_id
         self.alpha_disp = alpha_disp
         self.alpha_over = alpha_over
         self.initial_cash = initial_cash
         
-        # Dos cuentas de caja independientes para separar Gross y Net
+        # --- 1. CUENTAS INDEPENDIENTES DE CAJA (GROSS Y NET) ---
         self.cash_net = initial_cash
         self.cash_gross = initial_cash
         
-        # n_initial_positions Muestreado entre 5 y 30 si no se especifica
+        # --- 2. SELECCIÓN ALEATORIA DE POSICIONES INICIALES ---
         if n_initial_positions is None:
             self.n_initial_positions = int(np.random.uniform(5, 31))
         else:
             self.n_initial_positions = n_initial_positions
             
-        self.portfolio = {} # {asset_id: {'quantity': q, 'buy_price': p}}
+        self.portfolio = {} # Estructura: {asset_id: {'quantity': q, 'buy_price': p}}
         
-        # Inicialización de posiciones iniciales
         selected_assets = np.random.choice(n_assets, size=self.n_initial_positions, replace=False)
         alloc_per_asset = (initial_cash * 0.7) / self.n_initial_positions
         
         for asset in selected_assets:
-            p0 = 100.0 # Precio base de inicialización
+            p0 = 100.0  # Precio base de inicialización
             qty = alloc_per_asset / p0
             self.portfolio[asset] = {'quantity': qty, 'buy_price': p0}
             self.cash_net -= alloc_per_asset
@@ -33,6 +45,18 @@ class Agent:
         self.initial_portfolio_value = initial_cash
 
     def decide_trades(self, day, current_prices, spread_bps=10.0, commission_usd=1.0, confound=None):
+        """Evalúa el portafolio actual y ejecuta órdenes de compra/venta según sesgos o confusores.
+
+        Args:
+            day (int): Día actual de la simulación.
+            current_prices (pd.Series): Precios de mercado de todos los activos en el día t.
+            spread_bps (float, optional): Spread Bid-Ask en puntos básicos. Por defecto 10.0.
+            commission_usd (float, optional): Comisión fija por transacción. Por defecto 1.0.
+            confound (str, optional): Regla alternativa de venta ('rebalancing' o 'belief_in_reversal').
+
+        Returns:
+            list[dict]: Lista de diccionarios con las transacciones ejecutadas en el día.
+        """
         trades_executed = []
         base_sell_prob = 0.05
         
@@ -45,31 +69,30 @@ class Agent:
             sell_prob = base_sell_prob
             
             if confound == 'rebalancing':
-                # Regla de rebalanceo: Vender si la posición creció más del 10%
+                # Regla Racional: Vender si la posición ganó más del 10% para rebalancear
                 if cur_price > buy_price * 1.10:
                     sell_prob = 0.80
                 else:
                     sell_prob = 0.02
             elif confound == 'belief_in_reversal':
-                # Reversión a la media: Vender lo que subió pensando que caerá
+                # Creencia Racional: Vender lo que subió por expectativa de reversión a la media
                 if cur_price > buy_price:
                     sell_prob = base_sell_prob * 3.0
                 else:
                     sell_prob = base_sell_prob * 0.2
             else:
                 # Mecanismo Estándar de Disposición (Hazard Rate)
-                if cur_price > buy_price: # Ganancia en papel
+                if cur_price > buy_price:
                     sell_prob = base_sell_prob * (1.0 + 2.0 * self.alpha_disp)
-                elif cur_price < buy_price: # Pérdida en papel
+                elif cur_price < buy_price:
                     sell_prob = base_sell_prob * max(0.01, (1.0 - 0.8 * self.alpha_disp))
 
+            # Ejecución de la Venta
             if np.random.uniform(0, 1) < sell_prob:
-                # Precios de Ejecución
                 half_spread = (spread_bps / 10000.0) / 2.0
-                p_net_sell = cur_price * (1.0 - half_spread) # Involucra spread
-                p_gross_sell = cur_price                     # Precio medio puro
+                p_net_sell = cur_price * (1.0 - half_spread)
+                p_gross_sell = cur_price
                 
-                # Actualización de Cajas Independientes
                 self.cash_net += (qty * p_net_sell) - commission_usd
                 self.cash_gross += (qty * p_gross_sell)
                 

@@ -9,7 +9,10 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def main():
+    """Punto de entrada principal para ejecutar la simulación y análisis de escenarios."""
     np.random.seed(RANDOM_SEED)
+    
+    # --- 1. GENERACIÓN DE PRECIOS DE MERCADO ---
     print("--- 1. GENERANDO PRECIOS DE MERCADO ---")
     market_prices = generate_market_data(seed=RANDOM_SEED)
     
@@ -19,12 +22,14 @@ def main():
         3: {'name': 'Disposition High', 'alpha_disp': 0.8, 'alpha_over': 0.0, 'confound': None},
         4: {'name': 'Turnover Low', 'alpha_disp': 0.0, 'alpha_over': 0.3, 'confound': None},
         5: {'name': 'Turnover High', 'alpha_disp': 0.0, 'alpha_over': 0.8, 'confound': None},
-        6: {'name': 'Both Active (Official Table)', 'alpha_disp': 0.8, 'alpha_over': 0.8, 'confound': None},
+        6: {'name': 'Both Active', 'alpha_disp': 0.8, 'alpha_over': 0.8, 'confound': None},
         7: {'name': 'Rebalancing Confound', 'alpha_disp': 0.0, 'alpha_over': 0.0, 'confound': 'rebalancing'},
         8: {'name': 'Mean-Reversion Confound', 'alpha_disp': 0.0, 'alpha_over': 0.0, 'confound': 'belief_in_reversal'}
     }
 
     results = []
+    
+    # --- 2. EJECUCIÓN DE LOS 8 ESCENARIOS PRINCIPALES ---
     print(f"\n--- 2. EJECUTANDO ESCENARIOS ({N_TRADERS} TRADERS) ---")
     for sc_id, cfg in scenarios_config.items():
         print(f"Corriendo Escenario {sc_id}: {cfg['name']}...")
@@ -50,6 +55,7 @@ def main():
             'SE (Overconf)': round(se_over, 4)
         })
 
+    # --- 3. PRUEBA DE INDEPENDENCIA Y CORRELACIÓN DE PARAMETROS ---
     print("\n--- 3. CORRIENDO EXPERIMENTO DE CORRELACIÓN E INDEPENDENCIA ---")
     cfg_indep = {'name': 'Independence Test', 'alpha_disp': 'rand', 'alpha_over': 'rand', 'confound': None}
     traders_i, trades_df_i, val_gross_i, val_net_i, _ = run_scenario(cfg_indep, market_prices, n_traders=N_TRADERS)
@@ -62,6 +68,7 @@ def main():
     corr_param = np.corrcoef(alphas_disp, alphas_over)[0, 1]
     corr_behavior = np.corrcoef(alphas_disp, turnovers)[0, 1]
 
+    # --- 4. IMPRESIÓN Y SALIDA DE RESULTADOS ---
     summary_df = pd.DataFrame(results)
     print("\n=================================== TABLA DE RESULTADOS ===================================")
     print(summary_df.to_string(index=False))
